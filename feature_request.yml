@@ -1,0 +1,108 @@
+name: Lint & Validate
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  validate:
+    name: Validate Add-on
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip3 install pyyaml
+
+      - name: Validate config.yaml structure
+        run: |
+          python3 << 'EOF'
+          import yaml, sys, json
+
+          # --- config.yaml ---
+          with open("apex_trading/config.yaml") as f:
+              cfg = yaml.safe_load(f)
+
+          checks = [
+              ("name", str),
+              ("description", str),
+              ("version", str),
+              ("slug", str),
+              ("arch", list),
+              ("startup", str),
+              ("options", dict),
+              ("schema", dict),
+          ]
+          errors = []
+          for key, typ in checks:
+              if key not in cfg:
+                  errors.append(f"MISSING key: {key}")
+              elif not isinstance(cfg[key], typ):
+                  errors.append(f"WRONG TYPE: {key} should be {typ.__name__}")
+
+          if cfg.get("ingress") and "ingress_port" not in cfg:
+              errors.append("ingress=true but ingress_port missing")
+
+          # options and schema keys should match
+          opt_keys = set(cfg.get("options", {}).keys())
+          sch_keys = set(cfg.get("schema", {}).keys())
+          missing_in_schema = opt_keys - sch_keys
+          if missing_in_schema:
+              errors.append(f"Options not in schema: {missing_in_schema}")
+
+          # --- repository.json ---
+          with open("repository.json") as f:
+              repo = json.load(f)
+          for key in ["name", "url"]:
+              if key not in repo:
+                  errors.append(f"repository.json missing: {key}")
+
+          if errors:
+              for e in errors:
+                  print(f"ERROR: {e}")
+              sys.exit(1)
+          else:
+              print(f"✓ config.yaml valid — {cfg['name']} v{cfg['version']}")
+              print(f"✓ repository.json valid")
+          EOF
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile apex_trading/rootfs/opt/apex/server.py
+          echo "✓ server.py syntax OK"
+
+      - name: Check shell scripts
+        run: |
+          for f in install.sh \
+              apex_trading/rootfs/etc/s6-overlay/s6-rc.d/apex/run \
+              apex_trading/rootfs/etc/s6-overlay/s6-rc.d/init-apex/run; do
+            [ -f "$f" ] && bash -n "$f" && echo "✓ $f" || exit 1
+          done
+
+      - name: Check required files exist
+        run: |
+          required=(
+            "apex_trading/config.yaml"
+            "apex_trading/Dockerfile"
+            "apex_trading/rootfs/opt/apex/server.py"
+            "apex_trading/rootfs/opt/apex/static/index.html"
+            "apex_trading/rootfs/etc/s6-overlay/s6-rc.d/apex/run"
+            "apex_trading/rootfs/etc/s6-overlay/s6-rc.d/apex/type"
+            "apex_trading/rootfs/etc/s6-overlay/s6-rc.d/init-apex/run"
+            "apex_trading/rootfs/etc/s6-overlay/s6-rc.d/init-apex/type"
+            "apex_trading/translations/en.json"
+            "repository.json"
+            "install.sh"
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [ -f "$f" ]; then
+              echo "✓ $f"
+            else
+              echo "✗ MISSING: $f"
+              missing=1
+            fi
+          done
+          [ $missing -eq 0 ] || exit 1
