@@ -1,0 +1,113 @@
+name: "APEX Trading AI"
+description: "AI-powered trading bot with Claude market analysis, multi-source live price feeds, broker integration, tax optimization, and self-learning strategy engine."
+version: "1.69.39"
+slug: "apex_trading"
+url: "https://github.com/sam3gp8/apex-trading-addon"
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: application
+boot: auto
+init: false
+ports:
+  7123/tcp: 7123
+ports_description:
+  7123/tcp: "APEX Trading Dashboard"
+ingress: true
+ingress_port: 7123
+ingress_stream: false
+panel_icon: mdi:chart-line
+panel_title: "APEX Trading"
+options:
+  anthropic_api_key: ""
+  # ── Market data sources (up to 5 run simultaneously, results averaged) ──
+  # Source 1: Yahoo Finance — always free, no key needed
+  data_source_1: "yahoo"
+  data_key_1: ""
+  # Source 2: Finnhub — free key at finnhub.io (60 req/min real-time)
+  data_source_2: "finnhub"
+  data_key_2: ""
+  # Source 3: Polygon.io — free key at polygon.io (5 req/min, US stocks)
+  data_source_3: "polygon"
+  data_key_3: ""
+  # Source 4: Alpha Vantage — free key at alphavantage.co (25 req/day)
+  data_source_4: "alphavantage"
+  data_key_4: ""
+  # Source 5: spare slot — leave blank or add another source
+  data_source_5: ""
+  data_key_5: ""
+  # ── Trading config ───────────────────────────────────────────────────────
+  trading_mode: "paper"
+  risk_level: "moderate"
+  tax_bracket: 0.24
+  stop_loss_pct: 2.0
+  take_profit_pct: 6.0
+  max_position_pct: 5.0
+  daily_loss_limit: 500.0
+  # Fractional shares: true = use broker fractional share support (smaller positions)
+  allow_fractional: false
+  # Margin trading: true = size using buying_power (includes margin), false = cash only
+  allow_margin: false
+  auto_analysis_interval: 600
+  broker_platform: ""
+  broker_api_url: ""
+  broker_api_key: ""
+  broker_api_secret: ""
+  alpaca_stream_enabled: false
+  alpaca_stream_feed: "iex"
+  # ── Secondary AI Screener ─────────────────────────────────────────────────
+  # Runs independently every ~2 min to pre-qualify symbols before Claude scans
+  # Providers: "disabled" | "ollama" (local) | "groq" (free cloud) | "openai"
+  # Ollama: install via HACS addon, set screener_url to http://homeassistant.local:11434
+  # Groq:   free API key at console.groq.com — fast, no GPU needed
+  # OpenAI: API key from platform.openai.com
+  screener_provider: "disabled"
+  screener_url: "http://localhost:11434"
+  screener_model: "llama3.2"
+  screener_api_key: ""
+  screener_interval: 120
+  screener_top_n: 75
+  screener_min_score: 60
+  log_level: "info"
+schema:
+  anthropic_api_key: str
+  data_source_1: "list(yahoo|finnhub|polygon|alphavantage|tradier|)"
+  data_key_1: str
+  data_source_2: "list(yahoo|finnhub|polygon|alphavantage|tradier|)"
+  data_key_2: str
+  data_source_3: "list(yahoo|finnhub|polygon|alphavantage|tradier|)"
+  data_key_3: str
+  data_source_4: "list(yahoo|finnhub|polygon|alphavantage|tradier|)"
+  data_key_4: str
+  data_source_5: "list(yahoo|finnhub|polygon|alphavantage|tradier|)"
+  data_key_5: str
+  trading_mode: "list(paper|live)"
+  risk_level: "list(conservative|moderate|aggressive)"
+  tax_bracket: float
+  stop_loss_pct: float
+  take_profit_pct: float
+  max_position_pct: float
+  daily_loss_limit: float
+  allow_fractional: bool
+  allow_margin: bool
+  auto_analysis_interval: int
+  broker_platform: str
+  broker_api_url: str
+  broker_api_key: str
+  broker_api_secret: str
+  alpaca_stream_enabled: bool
+  alpaca_stream_feed: "list(iex|sip)"
+  screener_provider: "list(disabled|ollama|groq|openai)"
+  screener_url: str
+  screener_model: str
+  screener_api_key: str
+  screener_interval: int
+  screener_top_n: int
+  screener_min_score: int
+  log_level: "list(debug|info|warning|error)"
+map:
+  - config:rw
+  - data:rw
